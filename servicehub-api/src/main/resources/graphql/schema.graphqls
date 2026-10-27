@@ -1,0 +1,13 @@
+type Query {
+    servicos: [Servico!]!
+    servico(id: ID!): Servico
+}
+
+type Servico {
+    id: ID!
+    nome: String!
+    descricao: String!
+    categoria: String!
+    preco: Float!
+    disponivel: Boolean!
+}

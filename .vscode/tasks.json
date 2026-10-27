@@ -1,0 +1,173 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "inspect-files",
+			"type": "shell",
+			"command": "Get-Content servicehub-api/pom.xml; Get-Content servicehub-api/src/main/resources/application.properties; Get-Content servicehub-api/src/main/java/com/servicehub/servicehub_api/model/Servico.java; Get-Content servicehub-api/src/main/java/com/servicehub/servicehub_api/service/ServicoService.java; Get-Content servicehub-api/src/main/java/com/servicehub/servicehub_api/controler/ServicoController.java; Get-Content servicehub-api/src/test/java/com/servicehub/servicehub_api/ServicehubApiApplicationTests.java",
+			"isBackground": false
+		},
+		{
+			"label": "baseline-status-test",
+			"type": "shell",
+			"command": "git status --short; Get-Content README.md; Set-Location servicehub-api; mvn test",
+			"isBackground": false
+		},
+		{
+			"label": "inspect-more",
+			"type": "shell",
+			"command": "Get-Content servicehub-api/src/main/java/com/servicehub/servicehub_api/ServicehubApiApplication.java; Get-Content servicehub-api/src/main/java/com/servicehub/servicehub_api/repository/ServicoRepository.java; Get-Content servicehub-api/mvnw.cmd",
+			"isBackground": false
+		},
+		{
+			"label": "compile-step1",
+			"type": "shell",
+			"command": "Set-Location servicehub-api; .\\mvnw.cmd -q -DskipTests compile",
+			"isBackground": false
+		},
+		{
+			"label": "test-step2",
+			"type": "shell",
+			"command": "Set-Location servicehub-api; .\\mvnw.cmd test",
+			"isBackground": false
+		},
+		{
+			"label": "test-step3",
+			"type": "shell",
+			"command": "Set-Location servicehub-api; .\\mvnw.cmd test",
+			"isBackground": false
+		},
+		{
+			"label": "read-test-errors",
+			"type": "shell",
+			"command": "Get-ChildItem servicehub-api/target/surefire-reports/*.txt | ForEach-Object { Write-Output ('--- '+$_.Name); Select-String -Path $_.FullName -Pattern 'Caused by:|IllegalArgumentException|BeanCreationException|Failed to instantiate' -Context 0,3 }",
+			"isBackground": false
+		},
+		{
+			"label": "inspect-packages",
+			"type": "shell",
+			"command": "Get-ChildItem servicehub-api/src/main/java/com/servicehub/servicehub_api -Recurse -Filter *.java | ForEach-Object { Write-Output ('--- '+$_.FullName); Get-Content $_.FullName -TotalCount 2 }",
+			"isBackground": false
+		},
+		{
+			"label": "test-step4",
+			"type": "shell",
+			"command": "Set-Location servicehub-api; .\\mvnw.cmd test",
+			"isBackground": false
+		},
+		{
+			"label": "test-step5",
+			"type": "shell",
+			"command": "Set-Location servicehub-api; .\\mvnw.cmd test -q",
+			"isBackground": false
+		},
+		{
+			"label": "final-verify",
+			"type": "shell",
+			"command": "Set-Location servicehub-api; .\\mvnw.cmd clean test -q; if ($LASTEXITCODE -eq 0) { Write-Output 'MAVEN_EXIT=0' } else { Write-Output ('MAVEN_EXIT='+$LASTEXITCODE) }; Get-ChildItem target/surefire-reports/*.txt | ForEach-Object { Select-String -Path $_.FullName -Pattern 'Tests run:' }",
+			"isBackground": false
+		},
+		{
+			"label": "final-test-dtos",
+			"type": "shell",
+			"command": "Set-Location servicehub-api; .\\mvnw.cmd test -q; if ($LASTEXITCODE -eq 0) { Write-Output 'MAVEN_EXIT=0' } else { Write-Output ('MAVEN_EXIT='+$LASTEXITCODE) }; Get-ChildItem target/surefire-reports/*.txt | ForEach-Object { Select-String -Path $_.FullName -Pattern 'Tests run:' }",
+			"isBackground": false
+		},
+		{
+			"label": "check-env-and-usage",
+			"type": "shell",
+			"command": "$p='servicehub-api'; Write-Output '--- references ---'; Select-String -Path \"$p/src/main/resources/application.properties\",\"$p/src/main/java/**/*.java\" -Pattern 'SERVICEHUB_DB_PASSWORD|SERVICEHUB_JWT_SECRET|servicehub.jwt.secret' -SimpleMatch -ErrorAction SilentlyContinue | ForEach-Object { \"$($_.Path):$($_.LineNumber):$($_.Line -replace '(SERVICEHUB_DB_PASSWORD|SERVICEHUB_JWT_SECRET)=?[^} ]*','$1=<redacted>')\" }; Write-Output '--- env presence ---'; foreach($n in 'SERVICEHUB_DB_PASSWORD','SERVICEHUB_JWT_SECRET'){ $v=[Environment]::GetEnvironmentVariable($n,'Process'); $u=[Environment]::GetEnvironmentVariable($n,'User'); $m=[Environment]::GetEnvironmentVariable($n,'Machine'); Write-Output (\"{0}: Process={1}; User={2}; Machine={3}\" -f $n, [bool]$v, [bool]$u, [bool]$m) }",
+			"isBackground": false
+		},
+		{
+			"label": "check-env-and-usage-2",
+			"type": "shell",
+			"command": "Write-Output '--- references ---'; Select-String -Path 'servicehub-api/src/main/resources/application.properties','servicehub-api/src/main/java/**/*.java' -Pattern 'SERVICEHUB_DB_PASSWORD','SERVICEHUB_JWT_SECRET','servicehub.jwt.secret' -SimpleMatch -ErrorAction SilentlyContinue | ForEach-Object { Write-Output ($_.Path + ':' + $_.LineNumber) }; Write-Output '--- env presence ---'; foreach($n in @('SERVICEHUB_DB_PASSWORD','SERVICEHUB_JWT_SECRET')) { $v=[Environment]::GetEnvironmentVariable($n,'Process'); $u=[Environment]::GetEnvironmentVariable($n,'User'); $m=[Environment]::GetEnvironmentVariable($n,'Machine'); Write-Output ($n + ': Process=' + [bool]$v + '; User=' + [bool]$u + '; Machine=' + [bool]$m) }",
+			"isBackground": false
+		},
+		{
+			"label": "configure-local-jwt",
+			"type": "shell",
+			"command": "$existing=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); if(-not $existing){ $bytes=New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Fill($bytes); $generated=[Convert]::ToBase64String($bytes); [Environment]::SetEnvironmentVariable('SERVICEHUB_JWT_SECRET',$generated,'User'); Write-Output 'JWT_SECRET_ACTION=generated-and-saved-to-user-environment' } else { Write-Output 'JWT_SECRET_ACTION=already-present-user-environment' }; $check=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); Write-Output ('JWT_SECRET_PRESENT=' + [bool]$check); Write-Output ('JWT_SECRET_LENGTH_OK=' + ($check.Length -ge 32))",
+			"isBackground": false
+		},
+		{
+			"label": "generate-local-jwt-compatible",
+			"type": "shell",
+			"command": "$bytes=New-Object byte[] 48; $rng=New-Object Security.Cryptography.RNGCryptoServiceProvider; $rng.GetBytes($bytes); $rng.Dispose(); $generated=[Convert]::ToBase64String($bytes); [Environment]::SetEnvironmentVariable('SERVICEHUB_JWT_SECRET',$generated,'User'); $check=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); Write-Output 'JWT_SECRET_ACTION=generated-and-saved-to-user-environment'; Write-Output ('JWT_SECRET_PRESENT=' + [bool]$check); Write-Output ('JWT_SECRET_LENGTH_OK=' + ($check.Length -ge 32))",
+			"isBackground": false
+		},
+		{
+			"label": "start-servicehub-api",
+			"type": "shell",
+			"command": "$env:SERVICEHUB_DB_PASSWORD=[Environment]::GetEnvironmentVariable('SERVICEHUB_DB_PASSWORD','User'); $env:SERVICEHUB_JWT_SECRET=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); Set-Location servicehub-api; .\\mvnw.cmd spring-boot:run",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "probe-swagger",
+			"type": "shell",
+			"command": "try { $r=Invoke-WebRequest -Uri 'http://localhost:8080/swagger-ui.html' -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; Write-Output ('HTTP=' + [int]$r.StatusCode); Write-Output ('CONTENT_LENGTH=' + $r.RawContentLength) } catch { if($_.Exception.Response){ Write-Output ('HTTP=' + [int]$_.Exception.Response.StatusCode) } else { Write-Output ('ERROR=' + $_.Exception.Message) } }",
+			"isBackground": false
+		},
+		{
+			"label": "diagnose-java-processes",
+			"type": "shell",
+			"command": "Get-Process java,javaw,mvn,mvnd -ErrorAction SilentlyContinue | Select-Object ProcessName,Id,StartTime",
+			"isBackground": false
+		},
+		{
+			"label": "check-port-and-java",
+			"type": "shell",
+			"command": "Write-Output '--- port 8080 ---'; Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalAddress,LocalPort,OwningProcess; Write-Output '--- java commands ---'; Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | Select-Object ProcessId,CommandLine",
+			"isBackground": false
+		},
+		{
+			"label": "verify-swagger-http",
+			"type": "shell",
+			"command": "$r=Invoke-WebRequest -Uri 'http://localhost:8080/swagger-ui.html' -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 10; Write-Output ('HTTP=' + [int]$r.StatusCode); Write-Output ('CONTENT_LENGTH=' + $r.RawContentLength)",
+			"isBackground": false
+		},
+		{
+			"label": "diagnose-port-process",
+			"type": "shell",
+			"command": "$p=Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess; Write-Output ('PID=' + $p); if($p){ Get-Process -Id $p | Select-Object ProcessName,Id,Path,StartTime }",
+			"isBackground": false
+		},
+		{
+			"label": "restart-servicehub-with-env",
+			"type": "shell",
+			"command": "$p=Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess; if($p){ Stop-Process -Id $p -Force }; $env:SERVICEHUB_DB_PASSWORD=[Environment]::GetEnvironmentVariable('SERVICEHUB_DB_PASSWORD','User'); $env:SERVICEHUB_JWT_SECRET=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); Set-Location servicehub-api; .\\mvnw.cmd spring-boot:run",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "restart-after-jwt-diagnostic",
+			"type": "shell",
+			"command": "$p=Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess; if($p){ Stop-Process -Id $p -Force }; $env:SERVICEHUB_DB_PASSWORD=[Environment]::GetEnvironmentVariable('SERVICEHUB_DB_PASSWORD','User'); $env:SERVICEHUB_JWT_SECRET=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); Set-Location servicehub-api; .\\mvnw.cmd spring-boot:run",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "restart-after-filter-diagnostic",
+			"type": "shell",
+			"command": "$p=Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess; if($p){ Stop-Process -Id $p -Force }; $env:SERVICEHUB_DB_PASSWORD=[Environment]::GetEnvironmentVariable('SERVICEHUB_DB_PASSWORD','User'); $env:SERVICEHUB_JWT_SECRET=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); Set-Location servicehub-api; .\\mvnw.cmd spring-boot:run",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "start-final-api",
+			"type": "shell",
+			"command": "$env:SERVICEHUB_DB_PASSWORD=[Environment]::GetEnvironmentVariable('SERVICEHUB_DB_PASSWORD','User'); $env:SERVICEHUB_JWT_SECRET=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); Set-Location servicehub-api; .\\mvnw.cmd spring-boot:run",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "replace-api-instance",
+			"type": "shell",
+			"command": "$p=Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess; if($p){ Stop-Process -Id $p -Force; Start-Sleep -Seconds 1 }; $env:SERVICEHUB_DB_PASSWORD=[Environment]::GetEnvironmentVariable('SERVICEHUB_DB_PASSWORD','User'); $env:SERVICEHUB_JWT_SECRET=[Environment]::GetEnvironmentVariable('SERVICEHUB_JWT_SECRET','User'); Set-Location servicehub-api; .\\mvnw.cmd spring-boot:run",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

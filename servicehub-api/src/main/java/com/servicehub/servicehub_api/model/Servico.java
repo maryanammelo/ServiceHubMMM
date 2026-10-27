@@ -71,7 +71,7 @@ public class Servico {
     }
 
     public void setNome(String nome) {
-        this.nome = nome;
+        this.nome = nome == null ? null : nome.trim();
     }
 
     public String getDescricao() {
@@ -79,7 +79,7 @@ public class Servico {
     }
 
     public void setDescricao(String descricao) {
-        this.descricao = descricao;
+        this.descricao = descricao == null ? null : descricao.trim();
     }
 
     public String getCategoria() {
@@ -87,7 +87,7 @@ public class Servico {
     }
 
     public void setCategoria(String categoria) {
-        this.categoria = categoria;
+        this.categoria = categoria == null ? null : categoria.trim();
     }
 
     public BigDecimal getPreco() {

@@ -1,4 +1,4 @@
-package com.servicehub.servicehub_api.controller;
+package com.servicehub.servicehub_api.controler;
 
 import java.util.List;
 
@@ -12,11 +12,15 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.servicehub.servicehub_api.model.Servico;
+import com.servicehub.servicehub_api.dto.ServicoRequest;
+import com.servicehub.servicehub_api.dto.ServicoResponse;
 import com.servicehub.servicehub_api.service.ServicoService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -38,6 +42,8 @@ public class ServicoController {
     }
 
     @PostMapping
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','PROVIDER')")
     @Operation(
         summary = "Cadastrar serviço",
         description = "Cadastra um novo serviço na plataforma"
@@ -46,14 +52,14 @@ public class ServicoController {
         @ApiResponse(responseCode = "201", description = "Serviço cadastrado com sucesso"),
         @ApiResponse(responseCode = "400", description = "Dados enviados são inválidos")
     })
-    public ResponseEntity<Servico> criar(
-            @Valid @RequestBody Servico servico) {
+    public ResponseEntity<ServicoResponse> criar(@Valid @RequestBody ServicoRequest request) {
+        Servico servico = toEntity(request);
 
         Servico novoServico = servicoService.criar(servico);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(novoServico);
+                .body(ServicoResponse.from(novoServico));
     }
 
     @GetMapping
@@ -65,8 +71,8 @@ public class ServicoController {
         responseCode = "200",
         description = "Lista de serviços retornada com sucesso"
     )
-    public ResponseEntity<List<Servico>> listarTodos() {
-        return ResponseEntity.ok(servicoService.listarTodos());
+    public ResponseEntity<List<ServicoResponse>> listarTodos() {
+        return ResponseEntity.ok(servicoService.listarTodos().stream().map(ServicoResponse::from).toList());
     }
 
     @GetMapping("/{id}")
@@ -78,7 +84,7 @@ public class ServicoController {
         @ApiResponse(responseCode = "200", description = "Serviço encontrado"),
         @ApiResponse(responseCode = "404", description = "Serviço não encontrado")
     })
-    public ResponseEntity<Servico> buscarPorId(
+    public ResponseEntity<ServicoResponse> buscarPorId(
             @Parameter(
                 description = "Identificador do serviço",
                 example = "1",
@@ -86,10 +92,12 @@ public class ServicoController {
             )
             @PathVariable Long id) {
 
-        return ResponseEntity.ok(servicoService.buscarPorId(id));
+        return ResponseEntity.ok(ServicoResponse.from(servicoService.buscarPorId(id)));
     }
 
     @PutMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','PROVIDER')")
     @Operation(
         summary = "Atualizar serviço",
         description = "Atualiza todos os dados de um serviço existente"
@@ -99,21 +107,28 @@ public class ServicoController {
         @ApiResponse(responseCode = "400", description = "Dados enviados são inválidos"),
         @ApiResponse(responseCode = "404", description = "Serviço não encontrado")
     })
-    public ResponseEntity<Servico> atualizar(
+    public ResponseEntity<ServicoResponse> atualizar(
             @Parameter(
                 description = "Identificador do serviço",
                 example = "1",
                 required = true
             )
             @PathVariable Long id,
-            @Valid @RequestBody Servico servico) {
+            @Valid @RequestBody ServicoRequest request) {
 
         return ResponseEntity.ok(
-                servicoService.atualizar(id, servico)
+                ServicoResponse.from(servicoService.atualizar(id, toEntity(request)))
         );
     }
 
+    private Servico toEntity(ServicoRequest request) {
+        Servico s = new Servico(); s.setNome(request.nome()); s.setDescricao(request.descricao());
+        s.setCategoria(request.categoria()); s.setPreco(request.preco()); s.setDisponivel(request.disponivel()); return s;
+    }
+
     @DeleteMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Excluir serviço",
         description = "Exclui um serviço pelo seu identificador"
